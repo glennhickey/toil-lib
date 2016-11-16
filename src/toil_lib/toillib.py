@@ -473,9 +473,13 @@ class FileIOStore(IOStore):
                 self.path_prefix))
             raise RuntimeError("File {} missing!".format(real_path))
         
-        # Make a symlink to grab things
-        os.symlink(real_path, local_path)
-            
+        ## Make a symlink to grab things
+        #os.symlink(real_path, local_path)
+         
+        # Issue with docker working with simlinks.
+        #   Copying file instead
+        shutil.copy(real_path, local_path)
+        
         # Look at the file stats
         file_stats = os.stat(real_path)
         
