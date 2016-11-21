@@ -461,7 +461,7 @@ class FileIOStore(IOStore):
                 # will be more informative.
                 pass
                 
-        # Make sure the path is clear for the symlink.
+        # Make sure the path is clear for copying
         assert(not os.path.exists(local_path))
         
         # Where is the file actually?
@@ -472,9 +472,17 @@ class FileIOStore(IOStore):
                 "Can't find {} from FileIOStore in {}!".format(input_path,
                 self.path_prefix))
             raise RuntimeError("File {} missing!".format(real_path))
+
+        # Make a temporary file
+        temp_handle, temp_path = tempfile.mkstemp(dir=os.path.dirname(local_path))
+        os.close(temp_handle)
         
-        # Make a symlink to grab things
-        os.symlink(real_path, local_path)
+        # Copy to the temp file
+        shutil.copy2(real_path, temp_path)
+            
+        # Rename the temp file to the right place, atomically
+        RealTimeLogger.get().info("rename {} -> {}".format(temp_path, local_path))
+        os.rename(temp_path, local_path)
             
         # Look at the file stats
         file_stats = os.stat(real_path)
