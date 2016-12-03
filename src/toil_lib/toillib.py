@@ -200,7 +200,7 @@ class RealTimeLogger(object):
         
         return cls.logger
 
-def write_global_directory(file_store, path, cleanup=False, tee=None):
+def write_global_directory(file_store, path, cleanup=False, tee=None, compress=True):
     """
     Write the given directory into the file store, and return an ID that can be
     used to retrieve it. Writes the files in the directory and subdirectories
@@ -218,10 +218,14 @@ def write_global_directory(file_store, path, cleanup=False, tee=None):
     
     """
     
+    write_stream_mode = "w"
+    if compress:
+        write_stream_mode = "w|gz"
+    
     if tee is not None:
         with open(tee, "w") as file_handle:
             # We have a stream, so start taring into it
-            with tarfile.open(fileobj=file_handle, mode="w|gz") as tar:
+            with tarfile.open(fileobj=file_handle, mode=write_stream_mode) as tar:
                 # Open it for streaming-only write (no seeking)
                 
                 # We can't just add the root directory, since then we wouldn't be
@@ -231,7 +235,7 @@ def write_global_directory(file_store, path, cleanup=False, tee=None):
                     # Add each file in the directory to the tar, with a relative
                     # path
                     tar.add(os.path.join(path, file_name), arcname=file_name)
-                    
+        
         # Save the file on disk to the file store.
         return file_store.writeGlobalFile(tee)
     else:
@@ -240,7 +244,7 @@ def write_global_directory(file_store, path, cleanup=False, tee=None):
             file_id):
             # We have a stream, so start taring into it
             # TODO: don't duplicate this code.
-            with tarfile.open(fileobj=file_handle, mode="w|gz") as tar:
+            with tarfile.open(fileobj=file_handle, mode=write_stream_mode) as tar:
                 # Open it for streaming-only write (no seeking)
                 
                 # We can't just add the root directory, since then we wouldn't be
