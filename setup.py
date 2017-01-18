@@ -1,4 +1,4 @@
-from version import version
+from version import version, required_versions
 from setuptools import find_packages, setup
 from pkg_resources import parse_version, require, DistributionNotFound
 
@@ -56,6 +56,7 @@ kwargs = dict(
     author='UCSC Computational Genomics Lab',
     author_email='cgl-toil@googlegroups.com',
     url="https://github.com/BD2KGenomics/toil-lib",
+    install_requires=[x + y for x, y in required_versions.iteritems()],
     package_dir={'': 'src'},
     packages=find_packages('src'))
 
