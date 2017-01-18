@@ -13,3 +13,5 @@
 # limitations under the License.
 
 version = '1.1.0a1'
+
+required_versions = {'toil': '==3.5.0a1.dev251'}
