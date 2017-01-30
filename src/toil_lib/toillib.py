@@ -19,8 +19,7 @@ import datetime
 
 # Need stuff for Amazon s3
 try:
-    from boto.s3.connection import S3Connection
-    from boto.s3.key import Key
+    import boto3
     have_s3 = True
 except ImportError:
     have_s3 = False
@@ -678,7 +677,7 @@ class S3IOStore(IOStore):
     
     """
     
-    def __init__(self, region, bucket_name=""):
+    def __init__(self, region, bucket_name):
         """
         Make a new S3IOStore that reads from and writes to the given
         container in the given account, adding the given prefix to keys. All
@@ -691,9 +690,7 @@ class S3IOStore(IOStore):
         
         self.region = region
         self.bucket_name = bucket_name
-        
-        # This will hold the s3 bucket connection
-        self.connection = None
+        self.s3 = None
         
     def __connect(self):
         """
@@ -701,17 +698,18 @@ class S3IOStore(IOStore):
         Creates the S3 bucket if it doesn't exist.
         """
         
-        if self.connection is None:
-            RealTimeLogger.get().debug("Connecting to bucket {}".format(self.bucket_name))
+        if self.s3 is None:
+            RealTimeLogger.get().debug("Connecting to bucket {} in region".format(
+                self.bucket_name, self.region))
             
             # Connect to the s3 bucket service where we keep everything
-            s3 = S3Connection()
-            if s3.lookup(self.bucket_name) is None:
-                bucket = s3.create_bucket(self.bucket_name)
-            else:
-                bucket = s3.get_bucket(self.bucket_name)
-            self.connection = Key(bucket)
-            
+            self.s3 = boto3.client('s3')
+            try:
+                self.s3.head_bucket(Bucket=self.bucket_name)            
+            except:
+                self.s3.create_bucket(Bucket=self.bucket_name,
+                                      CreateBucketConfiguration={'LocationConstraint':self.region})
+
     def read_input_file(self, input_path, local_path):
         """
         Get input from S3.
@@ -722,9 +720,8 @@ class S3IOStore(IOStore):
         RealTimeLogger.get().debug("Loading {} from S3IOStore".format(
             input_path))
         
-        # Download the file contents. 
-        self.connection.key = input_path
-        self.connection.get_contents_to_filename(local_path)
+        # Download the file contents.
+        self.s3.download_file(self.bucket_name, input_path, local_path)
             
     def list_input_directory(self, input_path, recursive=False,
         with_times=False):
@@ -755,11 +752,9 @@ class S3IOStore(IOStore):
         
         RealTimeLogger.get().debug("Saving {} to S3IOStore".format(
             output_path))
-        
-        # Upload the blob (synchronously)
-        # TODO: catch no container error here, make the container, and retry
-        self.connection.key = output_path
-        self.connection.set_contents_from_filename(local_path)
+
+        # Download the file contents.
+        self.s3.upload_file(local_path, self.bucket_name, output_path)
     
     def exists(self, path):
         """
